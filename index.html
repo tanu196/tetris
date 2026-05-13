@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Neon Tetris</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="game-shell" aria-label="Neon Tetris">
+      <section class="hud topbar" aria-label="Game status">
+        <div>
+          <span class="label">Score</span>
+          <strong id="score">0</strong>
+        </div>
+        <div>
+          <span class="label">Lines</span>
+          <strong id="lines">0</strong>
+        </div>
+        <div>
+          <span class="label">Level</span>
+          <strong id="level">1</strong>
+        </div>
+        <div>
+          <span class="label">Best</span>
+          <strong id="best">0</strong>
+        </div>
+      </section>
+
+      <section class="play-area">
+        <aside class="side-panel left-panel" aria-label="Hold piece">
+          <div class="mini-panel">
+            <span class="label">Hold</span>
+            <canvas id="hold" width="112" height="112"></canvas>
+          </div>
+          <button id="restart" class="command-button" type="button">Restart</button>
+        </aside>
+
+        <section class="board-wrap" aria-label="Game board">
+          <canvas id="board" width="300" height="600"></canvas>
+          <div id="message" class="message hidden" role="status" aria-live="polite">
+            <strong id="messageTitle">Paused</strong>
+            <span id="messageHint">Press P to resume</span>
+          </div>
+        </section>
+
+        <aside class="side-panel right-panel" aria-label="Next pieces">
+          <div class="mini-panel">
+            <span class="label">Next</span>
+            <canvas id="next" width="112" height="240"></canvas>
+          </div>
+          <button id="pause" class="command-button" type="button">Pause</button>
+        </aside>
+      </section>
+
+      <section class="touch-controls" aria-label="Touch controls">
+        <button type="button" data-action="left" aria-label="Move left">Left</button>
+        <button type="button" data-action="rotateLeft" aria-label="Rotate left">Z</button>
+        <button type="button" data-action="rotateRight" aria-label="Rotate right">X</button>
+        <button type="button" data-action="right" aria-label="Move right">Right</button>
+        <button type="button" data-action="down" aria-label="Soft drop">Down</button>
+        <button type="button" data-action="hold" aria-label="Hold piece">Hold</button>
+        <button type="button" data-action="drop" aria-label="Hard drop">Drop</button>
+      </section>
+
+      <p class="key-help">Arrows move, Up/X rotate, Z reverse, Space drops, C holds, P pauses.</p>
+    </main>
+
+    <script src="game.js"></script>
+  </body>
+</html>
