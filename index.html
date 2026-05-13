@@ -1,69 +1,104 @@
 <!doctype html>
-<html lang="en">
+<html lang="ja">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Neon Tetris</title>
+    <title>Neon Tetris Battle</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <main class="game-shell" aria-label="Neon Tetris">
-      <section class="hud topbar" aria-label="Game status">
-        <div>
-          <span class="label">Score</span>
-          <strong id="score">0</strong>
+    <main class="game-shell" aria-label="Neon Tetris Battle">
+      <section class="battle-score" aria-label="Battle score">
+        <div class="score-card is-p1">
+          <span class="label">P1</span>
+          <strong id="wins-p1">0</strong>
         </div>
-        <div>
-          <span class="label">Lines</span>
-          <strong id="lines">0</strong>
-        </div>
-        <div>
-          <span class="label">Level</span>
-          <strong id="level">1</strong>
-        </div>
-        <div>
-          <span class="label">Best</span>
-          <strong id="best">0</strong>
+        <div class="versus">VS</div>
+        <div class="score-card is-p2">
+          <span class="label">P2</span>
+          <strong id="wins-p2">0</strong>
         </div>
       </section>
 
-      <section class="play-area">
-        <aside class="side-panel left-panel" aria-label="Hold piece">
-          <div class="mini-panel">
-            <span class="label">Hold</span>
-            <canvas id="hold" width="112" height="112"></canvas>
+      <section class="duel-arena" aria-label="Two player boards">
+        <article class="player-card is-active" id="panel-p1">
+          <header class="player-head">
+            <strong>Player 1</strong>
+            <span id="status-p1">Ready</span>
+          </header>
+          <div class="board-wrap">
+            <canvas id="board-p1" width="300" height="600"></canvas>
+            <div id="message-p1" class="message hidden" role="status" aria-live="polite">
+              <strong id="message-title-p1">KO</strong>
+              <span id="message-hint-p1">Restart</span>
+            </div>
           </div>
+          <footer class="player-stats">
+            <span><b id="score-p1">0</b> pts</span>
+            <span><b id="lines-p1">0</b> lines</span>
+          </footer>
+          <div class="mini-strip">
+            <div>
+              <span class="label">Hold</span>
+              <canvas id="hold-p1" width="80" height="80"></canvas>
+            </div>
+            <div>
+              <span class="label">Next</span>
+              <canvas id="next-p1" width="80" height="80"></canvas>
+            </div>
+          </div>
+        </article>
+
+        <article class="player-card" id="panel-p2">
+          <header class="player-head">
+            <strong>Player 2</strong>
+            <span id="status-p2">Ready</span>
+          </header>
+          <div class="board-wrap">
+            <canvas id="board-p2" width="300" height="600"></canvas>
+            <div id="message-p2" class="message hidden" role="status" aria-live="polite">
+              <strong id="message-title-p2">KO</strong>
+              <span id="message-hint-p2">Restart</span>
+            </div>
+          </div>
+          <footer class="player-stats">
+            <span><b id="score-p2">0</b> pts</span>
+            <span><b id="lines-p2">0</b> lines</span>
+          </footer>
+          <div class="mini-strip">
+            <div>
+              <span class="label">Hold</span>
+              <canvas id="hold-p2" width="80" height="80"></canvas>
+            </div>
+            <div>
+              <span class="label">Next</span>
+              <canvas id="next-p2" width="80" height="80"></canvas>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="battle-controls" aria-label="Battle controls">
+        <div class="player-toggle" aria-label="Touch target player">
+          <button class="is-selected" type="button" data-target="p1">P1</button>
+          <button type="button" data-target="p2">P2</button>
+        </div>
+        <div class="touch-controls" aria-label="Touch controls">
+          <button type="button" data-action="left" aria-label="Move left">Left</button>
+          <button type="button" data-action="rotateLeft" aria-label="Rotate left">Z</button>
+          <button type="button" data-action="rotateRight" aria-label="Rotate right">X</button>
+          <button type="button" data-action="right" aria-label="Move right">Right</button>
+          <button type="button" data-action="down" aria-label="Soft drop">Down</button>
+          <button type="button" data-action="hold" aria-label="Hold piece">Hold</button>
+          <button type="button" data-action="drop" aria-label="Hard drop">Drop</button>
+        </div>
+        <div class="system-controls">
           <button id="restart" class="command-button" type="button">Restart</button>
-        </aside>
-
-        <section class="board-wrap" aria-label="Game board">
-          <canvas id="board" width="300" height="600"></canvas>
-          <div id="message" class="message hidden" role="status" aria-live="polite">
-            <strong id="messageTitle">Paused</strong>
-            <span id="messageHint">Press P to resume</span>
-          </div>
-        </section>
-
-        <aside class="side-panel right-panel" aria-label="Next pieces">
-          <div class="mini-panel">
-            <span class="label">Next</span>
-            <canvas id="next" width="112" height="240"></canvas>
-          </div>
           <button id="pause" class="command-button" type="button">Pause</button>
-        </aside>
+        </div>
       </section>
 
-      <section class="touch-controls" aria-label="Touch controls">
-        <button type="button" data-action="left" aria-label="Move left">Left</button>
-        <button type="button" data-action="rotateLeft" aria-label="Rotate left">Z</button>
-        <button type="button" data-action="rotateRight" aria-label="Rotate right">X</button>
-        <button type="button" data-action="right" aria-label="Move right">Right</button>
-        <button type="button" data-action="down" aria-label="Soft drop">Down</button>
-        <button type="button" data-action="hold" aria-label="Hold piece">Hold</button>
-        <button type="button" data-action="drop" aria-label="Hard drop">Drop</button>
-      </section>
-
-      <p class="key-help">Arrows move, Up/X rotate, Z reverse, Space drops, C holds, P pauses.</p>
+      <p class="key-help">P1: A/D/S/W, Q hold, F drop. P2: arrows, / hold, Enter drop. P pauses, R restarts.</p>
     </main>
 
     <script src="game.js"></script>

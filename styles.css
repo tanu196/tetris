@@ -3,15 +3,14 @@
   --cyan: #39f5ff;
   --magenta: #ff3fd7;
   --amber: #ffc75a;
-  --mint: #50ffba;
+  --green: #55ffaf;
   --ink: #06101e;
-  --panel: rgba(5, 12, 26, 0.7);
-  --panel-strong: rgba(7, 14, 30, 0.86);
+  --panel: rgba(5, 12, 26, 0.72);
+  --panel-strong: rgba(7, 14, 30, 0.9);
   --line: rgba(255, 255, 255, 0.18);
   --text: #f5fbff;
   --muted: #b6c3d8;
 }
-
 
 * {
   box-sizing: border-box;
@@ -30,7 +29,7 @@ body {
   place-items: center;
   overflow-x: hidden;
   background:
-    linear-gradient(180deg, rgba(2, 5, 15, 0.05), rgba(2, 5, 15, 0.84)),
+    linear-gradient(180deg, rgba(2, 5, 15, 0.08), rgba(2, 5, 15, 0.86)),
     url("assets/anime-city-bg.png") center / cover fixed,
     #08111f;
   color: var(--text);
@@ -49,24 +48,21 @@ body::after {
 
 body::before {
   background:
-    radial-gradient(circle at 15% 18%, rgba(57, 245, 255, 0.22), transparent 24rem),
-    radial-gradient(circle at 85% 78%, rgba(255, 63, 215, 0.2), transparent 22rem),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
-  background-size: auto, auto, 4px 4px;
+    radial-gradient(circle at 18% 14%, rgba(57, 245, 255, 0.22), transparent 22rem),
+    radial-gradient(circle at 84% 78%, rgba(255, 63, 215, 0.2), transparent 20rem);
   mix-blend-mode: screen;
   animation: cityPulse 7s ease-in-out infinite alternate;
 }
 
 body::after {
-  background:
-    repeating-linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.035) 0,
-      rgba(255, 255, 255, 0.035) 1px,
-      transparent 1px,
-      transparent 8px
-    );
-  opacity: 0.36;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.034) 0,
+    rgba(255, 255, 255, 0.034) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+  opacity: 0.32;
 }
 
 button {
@@ -82,21 +78,22 @@ button {
   min-height: 100svh;
   display: grid;
   grid-template-rows: auto 1fr auto auto;
-  gap: 10px;
-  align-items: center;
+  gap: 8px;
   padding: 10px;
 }
 
-.hud {
+.battle-score {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  align-items: center;
 }
 
-.hud > div,
-.mini-panel,
-.command-button,
-.touch-controls button {
+.score-card,
+.player-card,
+.player-toggle,
+.touch-controls button,
+.command-button {
   border: 1px solid var(--line);
   background: var(--panel);
   box-shadow:
@@ -105,91 +102,117 @@ button {
   backdrop-filter: blur(16px) saturate(130%);
 }
 
-.hud > div {
+.score-card {
   min-width: 0;
-  padding: 9px 8px;
+  padding: 8px 10px;
   border-radius: 8px;
+}
+
+.score-card strong {
+  display: block;
+  font-size: 1.35rem;
+  line-height: 1;
+  text-shadow: 0 0 18px rgba(57, 245, 255, 0.48);
+}
+
+.is-p2 strong {
+  text-shadow: 0 0 18px rgba(255, 63, 215, 0.5);
+}
+
+.versus {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(57, 245, 255, 0.24), rgba(255, 63, 215, 0.26));
+  color: white;
+  font-size: 0.88rem;
+  font-weight: 1000;
+  text-shadow: 0 0 14px rgba(255, 255, 255, 0.58);
 }
 
 .label {
   display: block;
-  margin-bottom: 4px;
   color: var(--muted);
   font-size: 0.62rem;
-  font-weight: 800;
+  font-weight: 850;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.hud strong {
-  display: block;
-  overflow: hidden;
-  color: white;
-  font-size: clamp(1.05rem, 7vw, 1.55rem);
-  line-height: 1;
-  text-overflow: ellipsis;
-  text-shadow: 0 0 18px rgba(57, 245, 255, 0.48);
-}
-
-.play-area {
+.duel-arena {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-areas:
-    "board board"
-    "hold next";
   gap: 8px;
-  align-items: center;
-  justify-content: center;
+  align-content: center;
 }
 
-.side-panel {
+.player-card {
+  min-width: 0;
   display: grid;
-  gap: 12px;
-}
-
-.left-panel {
-  grid-area: hold;
-  justify-self: stretch;
-}
-
-.right-panel {
-  grid-area: next;
-  justify-self: stretch;
-}
-
-.mini-panel {
-  display: grid;
-  justify-items: center;
-  min-height: 94px;
-  padding: 7px 6px;
+  gap: 6px;
+  padding: 7px;
   border-radius: 8px;
 }
 
-.mini-panel canvas {
-  width: 62px;
-  height: auto;
+.player-card.is-active {
+  border-color: rgba(57, 245, 255, 0.75);
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.32),
+    0 0 26px rgba(57, 245, 255, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
-#next {
-  width: 54px;
+#panel-p2.is-active {
+  border-color: rgba(255, 63, 215, 0.75);
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.32),
+    0 0 26px rgba(255, 63, 215, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.player-head,
+.player-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.player-head strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.82rem;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-head span,
+.player-stats {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+.player-stats b {
+  color: white;
 }
 
 .board-wrap {
   position: relative;
-  grid-area: board;
-  justify-self: center;
-  width: min(92vw, 300px);
-  width: min(92vw, 300px, calc((100svh - 320px) / 2));
+  width: 100%;
   aspect-ratio: 1 / 2;
-  border: 1px solid rgba(255, 255, 255, 0.26);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 8px;
   background:
-    linear-gradient(180deg, rgba(4, 11, 24, 0.92), rgba(3, 7, 18, 0.94)),
-    radial-gradient(circle at 40% 0%, rgba(57, 245, 255, 0.16), transparent 46%);
+    linear-gradient(180deg, rgba(4, 11, 24, 0.94), rgba(3, 7, 18, 0.96)),
+    radial-gradient(circle at 40% 0%, rgba(57, 245, 255, 0.15), transparent 46%);
   box-shadow:
-    0 0 0 1px rgba(57, 245, 255, 0.2),
-    0 28px 80px rgba(0, 0, 0, 0.5),
-    0 0 46px rgba(57, 245, 255, 0.18);
+    0 0 0 1px rgba(57, 245, 255, 0.16),
+    0 18px 42px rgba(0, 0, 0, 0.44);
   overflow: hidden;
 }
 
@@ -197,17 +220,17 @@ button {
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: inherit;
+  z-index: 1;
   background:
-    linear-gradient(90deg, transparent, rgba(57, 245, 255, 0.26), transparent),
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent),
     linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 18%);
-  opacity: 0.35;
+  opacity: 0.3;
   pointer-events: none;
 }
 
-#board {
+.board-wrap canvas {
   position: relative;
-  z-index: 1;
+  z-index: 0;
   display: block;
   width: 100%;
   height: 100%;
@@ -216,17 +239,16 @@ button {
 .message {
   position: absolute;
   z-index: 2;
-  inset: 38% 8% auto;
+  inset: 37% 7% auto;
   display: grid;
-  gap: 8px;
+  gap: 4px;
   justify-items: center;
-  padding: 18px 14px;
+  padding: 10px 7px;
   border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 8px;
-  background: rgba(4, 10, 22, 0.84);
+  background: rgba(4, 10, 22, 0.86);
   text-align: center;
-  backdrop-filter: blur(18px);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(16px);
 }
 
 .message.hidden {
@@ -234,7 +256,7 @@ button {
 }
 
 .message strong {
-  font-size: clamp(1.6rem, 7vw, 2.8rem);
+  font-size: clamp(1rem, 8vw, 1.8rem);
   line-height: 0.95;
   text-shadow:
     0 0 14px rgba(255, 63, 215, 0.68),
@@ -243,12 +265,48 @@ button {
 
 .message span {
   color: var(--muted);
-  font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 800;
 }
 
+.mini-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.mini-strip > div {
+  display: grid;
+  justify-items: center;
+  min-width: 0;
+  padding: 5px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(3, 8, 18, 0.52);
+}
+
+.mini-strip canvas {
+  width: min(100%, 44px);
+  height: auto;
+}
+
+.battle-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.player-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.player-toggle button,
 .command-button,
 .touch-controls button {
-  min-height: 38px;
+  min-height: 36px;
   border-radius: 8px;
   color: white;
   font-weight: 900;
@@ -259,19 +317,13 @@ button {
     background 140ms ease;
 }
 
-.command-button:hover,
-.touch-controls button:hover,
-.command-button:focus-visible,
-.touch-controls button:focus-visible {
-  outline: none;
-  border-color: rgba(57, 245, 255, 0.8);
-  background: rgba(10, 26, 52, 0.86);
-  transform: translateY(-1px);
+.player-toggle button {
+  background: transparent;
 }
 
-.command-button:active,
-.touch-controls button:active {
-  transform: translateY(1px) scale(0.98);
+.player-toggle button.is-selected {
+  background: linear-gradient(135deg, rgba(57, 245, 255, 0.34), rgba(255, 63, 215, 0.28));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 .touch-controls {
@@ -281,9 +333,8 @@ button {
 }
 
 .touch-controls button {
-  padding: 10px 8px;
-  color: var(--text);
-  font-size: 0.78rem;
+  padding: 8px 6px;
+  font-size: 0.76rem;
 }
 
 .touch-controls button[data-action="drop"] {
@@ -292,12 +343,39 @@ button {
   background: linear-gradient(135deg, var(--amber), #fff176);
 }
 
+.system-controls {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.command-button {
+  background: var(--panel-strong);
+}
+
+.player-toggle button:hover,
+.touch-controls button:hover,
+.command-button:hover,
+.player-toggle button:focus-visible,
+.touch-controls button:focus-visible,
+.command-button:focus-visible {
+  outline: none;
+  border-color: rgba(57, 245, 255, 0.8);
+  transform: translateY(-1px);
+}
+
+.player-toggle button:active,
+.touch-controls button:active,
+.command-button:active {
+  transform: translateY(1px) scale(0.98);
+}
+
 .key-help {
   display: none;
   margin: 0;
   color: rgba(245, 251, 255, 0.78);
-  font-size: 0.88rem;
-  font-weight: 700;
+  font-size: 0.76rem;
+  font-weight: 750;
   text-align: center;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
@@ -309,14 +387,13 @@ button {
   }
 
   to {
-    opacity: 0.92;
-    filter: saturate(1.24);
+    opacity: 0.94;
+    filter: saturate(1.22);
   }
 }
 
 @media (min-width: 431px) {
   body {
-    min-height: 100vh;
     padding: 18px 0;
   }
 
@@ -330,31 +407,47 @@ button {
       0 28px 90px rgba(0, 0, 0, 0.46),
       inset 0 1px 0 rgba(255, 255, 255, 0.16);
   }
+
+  .key-help {
+    display: block;
+  }
 }
 
 @media (max-height: 740px) {
-  .board-wrap {
-    width: min(82vw, 240px, calc((100svh - 286px) / 2));
+  .game-shell {
+    gap: 6px;
+    padding: 8px;
   }
 
-  .mini-panel {
-    min-height: 78px;
+  .score-card {
+    padding: 6px 8px;
   }
 
-  .mini-panel canvas {
-    width: 50px;
+  .versus {
+    width: 38px;
+    height: 38px;
   }
 
-  #next {
-    width: 44px;
+  .player-card {
+    gap: 4px;
+    padding: 5px;
+  }
+
+  .mini-strip > div {
+    padding: 3px;
+  }
+
+  .mini-strip canvas {
+    width: min(100%, 34px);
+  }
+
+  .player-toggle button,
+  .command-button,
+  .touch-controls button {
+    min-height: 32px;
   }
 
   .touch-controls button {
-    min-height: 34px;
-    padding: 7px 6px;
-  }
-
-  .game-shell {
-    gap: 7px;
+    padding: 6px 4px;
   }
 }
