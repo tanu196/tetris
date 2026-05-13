@@ -4,6 +4,7 @@ const BLOCK = 30;
 const PREVIEW = 20;
 const SCORE_TABLE = [0, 100, 300, 500, 800];
 const ATTACK_TABLE = [0, 0, 1, 2, 4];
+const FAST_DROP_INTERVAL = 34;
 
 const SHAPES = {
   I: [
@@ -67,6 +68,7 @@ let paused = false;
 let roundOver = false;
 let activePlayerId = "p1";
 let lastTime = 0;
+let audioContext = null;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
@@ -155,6 +157,61 @@ function drawMatrix(context, matrix, offsetX, offsetY, size, type, alpha = 1) {
   });
 }
 
+function getAudioContext() {
+  if (!audioContext) {
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtor) return null;
+    audioContext = new AudioCtor();
+  }
+  if (audioContext.state === "suspended") audioContext.resume();
+  return audioContext;
+}
+
+function unlockAudio() {
+  const audio = getAudioContext();
+  if (!audio) return;
+  const gain = audio.createGain();
+  gain.gain.value = 0;
+  gain.connect(audio.destination);
+  gain.disconnect();
+}
+
+function playLineClearSound(count) {
+  const audio = getAudioContext();
+  if (!audio) return;
+
+  const now = audio.currentTime;
+  const master = audio.createGain();
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.exponentialRampToValueAtTime(0.28, now + 0.015);
+  master.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+  master.connect(audio.destination);
+
+  const sweep = audio.createOscillator();
+  sweep.type = "sawtooth";
+  sweep.frequency.setValueAtTime(420 + count * 70, now);
+  sweep.frequency.exponentialRampToValueAtTime(980 + count * 120, now + 0.18);
+  sweep.frequency.exponentialRampToValueAtTime(220, now + 0.42);
+  sweep.connect(master);
+  sweep.start(now);
+  sweep.stop(now + 0.44);
+
+  const sparkleGain = audio.createGain();
+  sparkleGain.gain.setValueAtTime(0.0001, now);
+  sparkleGain.gain.exponentialRampToValueAtTime(0.18, now + 0.025);
+  sparkleGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+  sparkleGain.connect(audio.destination);
+
+  for (let i = 0; i < Math.min(4, count + 1); i += 1) {
+    const ping = audio.createOscillator();
+    ping.type = "triangle";
+    ping.frequency.value = 880 + i * 180;
+    ping.connect(sparkleGain);
+    ping.start(now + i * 0.035);
+    ping.stop(now + 0.24 + i * 0.035);
+  }
+}
+
 class Player {
   constructor(id, opponentId) {
     this.id = id;
@@ -186,11 +243,14 @@ class Player {
     this.lines = 0;
     this.level = 1;
     this.dropCounter = 0;
+    this.fastDropCounter = 0;
     this.dropInterval = 850;
     this.pendingGarbage = 0;
+    this.fastDropping = false;
     this.over = false;
     this.particles = [];
     this.flashRows = [];
+    this.clearEffects = [];
     this.statusEl.textContent = "Ready";
     this.setMessage("", "", false);
     this.refillQueue();
@@ -273,6 +333,11 @@ class Player {
     this.lockPiece();
   }
 
+  setFastDrop(active) {
+    this.fastDropping = active;
+    if (!active) this.fastDropCounter = 0;
+  }
+
   holdPiece() {
     if (!this.canAct() || !this.canHold) return;
     const heldType = this.current.type;
@@ -325,6 +390,8 @@ class Player {
     this.level = Math.floor(this.lines / 10) + 1;
     this.dropInterval = Math.max(90, 850 - (this.level - 1) * 66);
     this.score += SCORE_TABLE[completed.length] * this.level;
+    playLineClearSound(completed.length);
+    this.spawnClearEffects(completed, completed.length);
 
     const attack = ATTACK_TABLE[completed.length] || 0;
     if (attack) {
@@ -332,6 +399,31 @@ class Player {
       this.statusEl.textContent = `Attack +${attack}`;
     }
     return completed.length;
+  }
+
+  spawnClearEffects(rows, count) {
+    for (const row of rows) {
+      this.clearEffects.push({
+        row,
+        life: 30,
+        maxLife: 30,
+        hue: count >= 4 ? "rgba(255, 241, 117," : "rgba(57, 245, 255,",
+      });
+
+      for (let i = 0; i < 18; i += 1) {
+        const direction = i % 2 ? 1 : -1;
+        this.particles.push({
+          x: Math.random() * COLS * BLOCK,
+          y: (row + 0.5) * BLOCK + (Math.random() - 0.5) * 18,
+          vx: direction * (2.2 + Math.random() * 4.2),
+          vy: (Math.random() - 0.5) * 1.6,
+          life: 26 + Math.random() * 18,
+          color: count >= 4 ? "#fff176" : i % 3 ? "#39f5ff" : "#ff3fd7",
+          shape: "star",
+          size: 2.4 + Math.random() * 2.6,
+        });
+      }
+    }
   }
 
   receiveGarbage(count) {
@@ -376,6 +468,13 @@ class Player {
   update(delta) {
     if (!paused && !roundOver && !this.over) {
       this.dropCounter += delta;
+      if (this.fastDropping) {
+        this.fastDropCounter += delta;
+        while (this.fastDropCounter > FAST_DROP_INTERVAL && this.canAct()) {
+          this.softDrop();
+          this.fastDropCounter -= FAST_DROP_INTERVAL;
+        }
+      }
       if (this.dropCounter > this.dropInterval) {
         this.softDrop();
         this.dropCounter = 0;
@@ -395,6 +494,10 @@ class Player {
     this.flashRows = this.flashRows.filter((flash) => {
       flash.life -= 1;
       return flash.life > 0;
+    });
+    this.clearEffects = this.clearEffects.filter((effect) => {
+      effect.life -= 1;
+      return effect.life > 0;
     });
   }
 
@@ -443,6 +546,7 @@ class Player {
       this.ctx.fillStyle = `rgba(255, 255, 255, ${flash.life / 18})`;
       this.ctx.fillRect(0, flash.row * BLOCK, this.canvas.width, BLOCK);
     }
+    this.drawClearEffects();
 
     if (this.current && !this.over) {
       const ghost = this.ghostPiece();
@@ -463,11 +567,69 @@ class Player {
       this.ctx.fillStyle = particle.color;
       this.ctx.shadowBlur = 12;
       this.ctx.shadowColor = particle.color;
-      this.ctx.beginPath();
-      this.ctx.arc(particle.x, particle.y, 2.2, 0, Math.PI * 2);
-      this.ctx.fill();
+      if (particle.shape === "star") {
+        this.drawStar(particle.x, particle.y, particle.size || 3);
+      } else {
+        this.ctx.beginPath();
+        this.ctx.arc(particle.x, particle.y, 2.2, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
     }
     this.ctx.restore();
+  }
+
+  drawClearEffects() {
+    this.ctx.save();
+    this.ctx.globalCompositeOperation = "lighter";
+    for (const effect of this.clearEffects) {
+      const progress = 1 - effect.life / effect.maxLife;
+      const alpha = Math.max(0, effect.life / effect.maxLife);
+      const y = effect.row * BLOCK + BLOCK / 2;
+      const beamX = -this.canvas.width * 0.45 + progress * this.canvas.width * 1.8;
+
+      const beamGradient = this.ctx.createLinearGradient(beamX - 70, y, beamX + 90, y);
+      beamGradient.addColorStop(0, "rgba(255, 255, 255, 0)");
+      beamGradient.addColorStop(0.26, `${effect.hue}${0.16 * alpha})`);
+      beamGradient.addColorStop(0.5, `rgba(255, 255, 255, ${0.9 * alpha})`);
+      beamGradient.addColorStop(0.76, "rgba(255, 63, 215, 0.2)");
+      beamGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+
+      this.ctx.save();
+      this.ctx.translate(beamX, y);
+      this.ctx.rotate(-0.12);
+      this.ctx.fillStyle = beamGradient;
+      this.ctx.fillRect(-110, -BLOCK * 0.48, 220, BLOCK * 0.96);
+      this.ctx.restore();
+
+      this.ctx.strokeStyle = `rgba(255, 255, 255, ${0.7 * alpha})`;
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, y - BLOCK * 0.42);
+      this.ctx.lineTo(this.canvas.width, y + BLOCK * 0.34);
+      this.ctx.stroke();
+
+      this.ctx.strokeStyle = `${effect.hue}${0.42 * alpha})`;
+      this.ctx.lineWidth = 5;
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, y + Math.sin(progress * Math.PI) * 12);
+      this.ctx.lineTo(this.canvas.width, y - Math.sin(progress * Math.PI) * 12);
+      this.ctx.stroke();
+    }
+    this.ctx.restore();
+  }
+
+  drawStar(x, y, radius) {
+    this.ctx.beginPath();
+    for (let i = 0; i < 10; i += 1) {
+      const angle = -Math.PI / 2 + (Math.PI * 2 * i) / 10;
+      const distance = i % 2 ? radius * 0.42 : radius;
+      const sx = x + Math.cos(angle) * distance;
+      const sy = y + Math.sin(angle) * distance;
+      if (i === 0) this.ctx.moveTo(sx, sy);
+      else this.ctx.lineTo(sx, sy);
+    }
+    this.ctx.closePath();
+    this.ctx.fill();
   }
 
   drawHold() {
@@ -570,7 +732,23 @@ function runAction(playerId, action) {
   actionMap[action]?.(players[playerId]);
 }
 
+function startFastDrop(playerId) {
+  players[playerId].setFastDrop(true);
+}
+
+function stopFastDrop(playerId) {
+  players[playerId].setFastDrop(false);
+}
+
 document.addEventListener("keydown", (event) => {
+  unlockAudio();
+
+  if (event.key === "Shift") {
+    event.preventDefault();
+    if (!event.repeat) runAction("p1", "drop");
+    return;
+  }
+
   const keyActions = {
     a: ["p1", "left"],
     A: ["p1", "left"],
@@ -584,8 +762,6 @@ document.addEventListener("keydown", (event) => {
     E: ["p1", "rotateRight"],
     q: ["p1", "hold"],
     Q: ["p1", "hold"],
-    f: ["p1", "drop"],
-    F: ["p1", "drop"],
     ArrowLeft: ["p2", "left"],
     ArrowRight: ["p2", "right"],
     ArrowDown: ["p2", "down"],
@@ -597,17 +773,57 @@ document.addEventListener("keydown", (event) => {
   if (keyActions[event.key]) {
     event.preventDefault();
     const [playerId, action] = keyActions[event.key];
+    if (action === "down") {
+      startFastDrop(playerId);
+      if (event.repeat) return;
+    }
     runAction(playerId, action);
   }
   if (event.key === "p" || event.key === "P") togglePause();
   if (event.key === "r" || event.key === "R") resetRound();
 });
 
+document.addEventListener("keyup", (event) => {
+  if (event.key === "s" || event.key === "S") stopFastDrop("p1");
+  if (event.key === "ArrowDown") stopFastDrop("p2");
+});
+
+const activeDropPointers = new Map();
+
 document.querySelectorAll("[data-action]").forEach((button) => {
   button.addEventListener("pointerdown", (event) => {
     event.preventDefault();
-    runAction(activePlayerId, button.dataset.action);
+    unlockAudio();
+    const action = button.dataset.action;
+    if (action === "down") {
+      button.setPointerCapture?.(event.pointerId);
+      activeDropPointers.set(event.pointerId, activePlayerId);
+      startFastDrop(activePlayerId);
+    }
+    runAction(activePlayerId, action);
   });
+
+  const stopPointerDrop = (event) => {
+    const playerId = activeDropPointers.get(event.pointerId);
+    if (!playerId) return;
+    stopFastDrop(playerId);
+    activeDropPointers.delete(event.pointerId);
+  };
+
+  button.addEventListener("pointerup", stopPointerDrop);
+  button.addEventListener("pointercancel", stopPointerDrop);
+  button.addEventListener("lostpointercapture", stopPointerDrop);
+  button.addEventListener("pointerleave", stopPointerDrop);
+});
+
+window.addEventListener("blur", () => {
+  stopFastDrop("p1");
+  stopFastDrop("p2");
+  activeDropPointers.clear();
+});
+
+document.addEventListener("pointerdown", () => {
+  unlockAudio();
 });
 
 targetButtons.forEach((button) => {
