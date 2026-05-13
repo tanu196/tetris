@@ -25,6 +25,7 @@ body {
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100svh;
   display: grid;
   place-items: center;
   overflow-x: hidden;
@@ -76,19 +77,20 @@ button {
 .game-shell {
   position: relative;
   z-index: 1;
-  width: min(1120px, calc(100vw - 28px));
-  min-height: min(860px, calc(100vh - 28px));
+  width: min(430px, 100vw);
+  min-height: 100vh;
+  min-height: 100svh;
   display: grid;
   grid-template-rows: auto 1fr auto auto;
-  gap: 16px;
+  gap: 10px;
   align-items: center;
-  padding: clamp(14px, 2vw, 24px);
+  padding: 10px;
 }
 
 .hud {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 6px;
 }
 
 .hud > div,
@@ -105,7 +107,7 @@ button {
 
 .hud > div {
   min-width: 0;
-  padding: 12px 14px;
+  padding: 9px 8px;
   border-radius: 8px;
 }
 
@@ -113,7 +115,7 @@ button {
   display: block;
   margin-bottom: 4px;
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -123,7 +125,7 @@ button {
   display: block;
   overflow: hidden;
   color: white;
-  font-size: clamp(1.15rem, 3vw, 2rem);
+  font-size: clamp(1.05rem, 7vw, 1.55rem);
   line-height: 1;
   text-overflow: ellipsis;
   text-shadow: 0 0 18px rgba(57, 245, 255, 0.48);
@@ -131,8 +133,11 @@ button {
 
 .play-area {
   display: grid;
-  grid-template-columns: minmax(116px, 172px) auto minmax(116px, 172px);
-  gap: clamp(12px, 2vw, 22px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas:
+    "board board"
+    "hold next";
+  gap: 8px;
   align-items: center;
   justify-content: center;
 }
@@ -143,29 +148,38 @@ button {
 }
 
 .left-panel {
-  justify-self: end;
+  grid-area: hold;
+  justify-self: stretch;
 }
 
 .right-panel {
-  justify-self: start;
+  grid-area: next;
+  justify-self: stretch;
 }
 
 .mini-panel {
   display: grid;
   justify-items: center;
-  min-height: 164px;
-  padding: 14px;
+  min-height: 94px;
+  padding: 7px 6px;
   border-radius: 8px;
 }
 
 .mini-panel canvas {
-  width: 112px;
+  width: 62px;
   height: auto;
+}
+
+#next {
+  width: 54px;
 }
 
 .board-wrap {
   position: relative;
-  width: min(78vw, 390px);
+  grid-area: board;
+  justify-self: center;
+  width: min(92vw, 300px);
+  width: min(92vw, 300px, calc((100svh - 320px) / 2));
   aspect-ratio: 1 / 2;
   border: 1px solid rgba(255, 255, 255, 0.26);
   border-radius: 8px;
@@ -234,7 +248,7 @@ button {
 
 .command-button,
 .touch-controls button {
-  min-height: 46px;
+  min-height: 38px;
   border-radius: 8px;
   color: white;
   font-weight: 900;
@@ -261,7 +275,7 @@ button {
 }
 
 .touch-controls {
-  display: none;
+  display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
@@ -269,7 +283,7 @@ button {
 .touch-controls button {
   padding: 10px 8px;
   color: var(--text);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
 }
 
 .touch-controls button[data-action="drop"] {
@@ -279,6 +293,7 @@ button {
 }
 
 .key-help {
+  display: none;
   margin: 0;
   color: rgba(245, 251, 255, 0.78);
   font-size: 0.88rem;
@@ -299,89 +314,47 @@ button {
   }
 }
 
-@media (max-width: 780px) {
+@media (min-width: 431px) {
   body {
-    place-items: start center;
+    min-height: 100vh;
+    padding: 18px 0;
   }
 
   .game-shell {
-    width: min(100vw, 520px);
-    min-height: 100vh;
-    padding: 10px;
-    gap: 10px;
-  }
-
-  .hud {
-    gap: 6px;
-  }
-
-  .hud > div {
-    padding: 9px 8px;
-  }
-
-  .label {
-    font-size: 0.62rem;
-  }
-
-  .play-area {
-    grid-template-columns: 1fr minmax(210px, 66vw) 1fr;
-    gap: 7px;
-  }
-
-  .board-wrap {
-    width: min(66vw, 330px);
-  }
-
-  .mini-panel {
-    min-height: 116px;
-    padding: 9px 6px;
-  }
-
-  .mini-panel canvas {
-    width: min(82px, 20vw);
-  }
-
-  #next {
-    max-height: 154px;
-  }
-
-  .command-button {
-    min-height: 38px;
-    font-size: 0.78rem;
-  }
-
-  .touch-controls {
-    display: grid;
-  }
-
-  .key-help {
-    display: none;
+    min-height: min(100vh, 880px);
+    min-height: min(100svh, 880px);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 28px;
+    background: rgba(2, 7, 18, 0.38);
+    box-shadow:
+      0 28px 90px rgba(0, 0, 0, 0.46),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16);
   }
 }
 
-@media (max-width: 470px) {
-  .play-area {
-    grid-template-columns: 1fr;
-  }
-
-  .left-panel,
-  .right-panel {
-    grid-row: 2;
-    width: 100%;
-    grid-template-columns: 1fr 1fr;
-    justify-self: stretch;
-  }
-
+@media (max-height: 740px) {
   .board-wrap {
-    width: min(92vw, 300px);
-    justify-self: center;
+    width: min(82vw, 240px, calc((100svh - 286px) / 2));
   }
 
   .mini-panel {
-    min-height: 104px;
+    min-height: 78px;
   }
 
   .mini-panel canvas {
-    width: 76px;
+    width: 50px;
+  }
+
+  #next {
+    width: 44px;
+  }
+
+  .touch-controls button {
+    min-height: 34px;
+    padding: 7px 6px;
+  }
+
+  .game-shell {
+    gap: 7px;
   }
 }
