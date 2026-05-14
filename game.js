@@ -3,8 +3,10 @@ const ROWS = 20;
 const BLOCK = 30;
 const PREVIEW = 20;
 const SCORE_TABLE = [0, 100, 300, 500, 800];
-const ATTACK_TABLE = [0, 0, 1, 2, 4];
+const ATTACK_TABLE = [0, 0, 0, 1, 2];
 const FAST_DROP_INTERVAL = 34;
+const HARD_DROP_GUARD_MS = 240;
+const RESTART_CONFIRM_MS = 1200;
 
 const SHAPES = {
   I: [
@@ -69,6 +71,12 @@ let roundOver = false;
 let activePlayerId = "p1";
 let lastTime = 0;
 let audioContext = null;
+let bgmStarted = false;
+let bgmTimer = null;
+let bgmGain = null;
+let bgmStep = 0;
+let restartArmedUntil = 0;
+let restartGuardTimer = null;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
@@ -174,6 +182,55 @@ function unlockAudio() {
   gain.gain.value = 0;
   gain.connect(audio.destination);
   gain.disconnect();
+  startBgm();
+}
+
+function startBgm() {
+  const audio = getAudioContext();
+  if (!audio || bgmStarted) return;
+  bgmStarted = true;
+  bgmGain = audio.createGain();
+  bgmGain.gain.setValueAtTime(0.026, audio.currentTime);
+  bgmGain.connect(audio.destination);
+  scheduleBgmStep();
+  bgmTimer = window.setInterval(scheduleBgmStep, 360);
+}
+
+function scheduleBgmStep() {
+  const audio = getAudioContext();
+  if (!audio || !bgmGain || audio.state === "suspended") return;
+
+  const now = audio.currentTime;
+  const melody = [0, 2, 4, 7, 9, 7, 4, 2, 0, 4, 5, 9, 7, 5, 4, 2];
+  const scale = [261.63, 293.66, 329.63, 392.0, 440.0, 493.88, 523.25, 587.33, 659.25, 783.99];
+  const note = scale[melody[bgmStep % melody.length]];
+  playBgmTone(note, now, 0.42, "triangle", 0.04);
+
+  if (bgmStep % 2 === 0) {
+    playBgmTone(note * 2, now + 0.11, 0.2, "sine", 0.018);
+  }
+  if (bgmStep % 4 === 0) {
+    playBgmTone(note / 2, now, 1.2, "sine", 0.026);
+  }
+
+  bgmStep += 1;
+}
+
+function playBgmTone(frequency, start, duration, type, volume) {
+  const audio = getAudioContext();
+  if (!audio || !bgmGain) return;
+
+  const osc = audio.createOscillator();
+  const gain = audio.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(frequency, start);
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(volume, start + 0.035);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  osc.connect(gain);
+  gain.connect(bgmGain);
+  osc.start(start);
+  osc.stop(start + duration + 0.04);
 }
 
 function playLineClearSound(count) {
@@ -245,6 +302,7 @@ class Player {
     this.dropCounter = 0;
     this.fastDropCounter = 0;
     this.dropInterval = 850;
+    this.lastHardDropAt = 0;
     this.pendingGarbage = 0;
     this.fastDropping = false;
     this.over = false;
@@ -324,6 +382,9 @@ class Player {
 
   hardDrop() {
     if (!this.canAct()) return;
+    const now = performance.now();
+    if (now - this.lastHardDropAt < HARD_DROP_GUARD_MS) return;
+    this.lastHardDropAt = now;
     let distance = 0;
     while (!this.collides(this.current.x, this.current.y + 1, this.current.matrix)) {
       this.current.y += 1;
@@ -694,9 +755,50 @@ function endRound(loserId) {
 function resetRound() {
   roundOver = false;
   paused = false;
+  restartArmedUntil = 0;
+  if (restartGuardTimer) {
+    window.clearTimeout(restartGuardTimer);
+    restartGuardTimer = null;
+  }
+  restartButton.textContent = "Restart";
   pauseButton.textContent = "Pause";
   players.p1.resetRound();
   players.p2.resetRound();
+}
+
+function requestRestart() {
+  if (roundOver) {
+    resetRound();
+    return;
+  }
+
+  const now = performance.now();
+  if (now < restartArmedUntil) {
+    resetRound();
+    return;
+  }
+
+  restartArmedUntil = now + RESTART_CONFIRM_MS;
+  restartButton.textContent = "Again?";
+  for (const player of Object.values(players)) {
+    player.statusEl.textContent = "Restart?";
+  }
+
+  if (restartGuardTimer) window.clearTimeout(restartGuardTimer);
+  restartGuardTimer = window.setTimeout(() => {
+    restartArmedUntil = 0;
+    restartButton.textContent = "Restart";
+    if (!roundOver && paused) {
+      players.p1.statusEl.textContent = "Paused";
+      players.p2.statusEl.textContent = "Paused";
+    }
+    if (!roundOver && !paused) {
+      players.p1.statusEl.textContent = "Playing";
+      players.p2.statusEl.textContent = "Playing";
+      players.p1.updateHud();
+      players.p2.updateHud();
+    }
+  }, RESTART_CONFIRM_MS);
 }
 
 function togglePause() {
@@ -780,7 +882,7 @@ document.addEventListener("keydown", (event) => {
     runAction(playerId, action);
   }
   if (event.key === "p" || event.key === "P") togglePause();
-  if (event.key === "r" || event.key === "R") resetRound();
+  if (event.key === "r" || event.key === "R") requestRestart();
 });
 
 document.addEventListener("keyup", (event) => {
@@ -830,11 +932,8 @@ targetButtons.forEach((button) => {
   button.addEventListener("click", () => setActivePlayer(button.dataset.target));
 });
 
-document.querySelector("#panel-p1").addEventListener("pointerdown", () => setActivePlayer("p1"));
-document.querySelector("#panel-p2").addEventListener("pointerdown", () => setActivePlayer("p2"));
-
 pauseButton.addEventListener("click", togglePause);
-restartButton.addEventListener("click", resetRound);
+restartButton.addEventListener("click", requestRestart);
 
 function update(time = 0) {
   const delta = time - lastTime;
